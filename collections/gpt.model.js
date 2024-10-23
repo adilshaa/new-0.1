@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { isObject } = require("../utils/generators");
 
 async function handleError(err) {
   //   const stack = err.stack || "";
@@ -271,7 +272,6 @@ const extractAndFormatCode = (responseText) => {
 //   return sections;
 // }
 // 1-------------
-
 function parseGPTResponse(response) {
   const lines = response.split("\n");
   const result = [];
@@ -347,63 +347,76 @@ function parseGPTResponse(response) {
   return result;
 }
 
-function checkgpt(req, res) {
-  const { prompt } = req.body;
+let script = `
+app.post("/mock", async (req, res) => {
+  axios
+    .post("https://easygo-grf6.onrender.com/mock", inputObject)
+    .then((response) => {
+      res.json({
+        stats: " success",
+        data: response.data,
+        created_date: new Date(),
+      });
+    })
+    .catch((error) => {
+      console.error("Error making GET request:", error);
+    });
+});
+`;
+
+let prompt = `
+Here is the code snipent to manuplate. " ${script}  Can i get a updated version with validation and everything with tis
+And also can you add jwt session managment also on that, and also redis caching, ip address caching 
+`;
+async function checkgpt(prompt) {
   try {
     let messages = [
       {
         role: "system",
-        content: "You are an expert in programming",
+        content: `You are an expert in programming. You have to manipulate a given code in Node.js. Code snippet will be given below. There are some conditions that have to satisfy for this response result.
+      Conditions are as follows: 
+      1. The code snippet should be a Node.js code, then only you return a manipulated response. If it's not, you have to throw an error with a label of 'error'. You have to send it like how the model differentiates the different types of languages in the text response and return it the same way.
+      2. Response should be one set of code snippet. The response should return Node.js code.`,
       },
       { role: "user", content: prompt },
     ];
 
-    axios
-      .post(
-        "https://nexra.aryahcr.cc/api/chat/complements",
-        {
-          messages: messages,
-          stream: false,
-          markdown: false,
-          model: "gpt-4o",
+    const response = await axios.post(
+      "https://nexra.aryahcr.cc/api/chat/complements",
+      {
+        messages: messages,
+        stream: false,
+        markdown: false,
+        model: "gpt-4o",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
         },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      )
-      .then((response) => {
-        if (response.status === 200) {
-          console.log(response.data);
-          let input = response.data;
-          if (!isObject(input)) {
-            input = JSON.parse(response.data.replace(/\x1E/g, ""));
-          }
-          console.log(input);
+      }
+    );
 
-          let extracted = parseGPTResponse(input.message);
+    if (response.status === 200) {
+      let input = response.data;
+      if (!isObject(input)) {
+        input = JSON.parse(response.data.replace(/\x1E/g, ""));
+      }
 
-          return res.status(200).json({
-            status: "Success",
-            res: extracted,
-            responseString: JSON.stringify(extracted, null, 2),
-          });
-        } else {
-          console.log("Error");
-          return res.status(500).json({ status: "error" });
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
+      let extracted = parseGPTResponse(input.message);
+      return extracted; // Return the extracted response
+    } else {
+      throw new Error("Error in response status");
+    }
   } catch (error) {
-    return res.status(500).json({ status: "error" });
+    console.error("Error:", error);
+    throw new Error("Error occurred during the request");
   }
 }
+// console.log(checkgpt(prompt));
 
 module.exports = {
   // parseResponse,
+  checkgpt,
   extractAndFormatCode,
   separateTextAndCode,
   parseGPTResponse,

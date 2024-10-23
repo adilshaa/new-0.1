@@ -52,16 +52,16 @@ const inputObject = {
   },
 };
 
-app.get("/", async (req, res) => {
-  axios
-    .get("http://localhost:3000")
-    .then((response) => {
-      res.json({ stats: " success", data: response.data });
-    })
-    .catch((error) => {
-      console.error("Error making GET request:", error);
-    });
-});
+// app.get("/", async (req, res) => {
+//   axios
+//     .get("http://localhost:3000")
+//     .then((response) => {
+//       res.json({ stats: " success", data: response.data });
+//     })
+//     .catch((error) => {
+//       console.error("Error making GET request:", error);
+//     });
+// });
 
 app.post("/mock", async (req, res) => {
   axios

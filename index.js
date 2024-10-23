@@ -1,5 +1,5 @@
 const express = require("express");
-const router = require("./router");
+const userRouter = require("./src/router/user");
 const partnerRoutes = require("./src/router/route");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -15,7 +15,7 @@ app.use(
 );
 
 app.use(express.json());
-app.use("/", router);
+app.use("/", userRouter);
 app.use("/part", partnerRoutes);
 
 mongoose
